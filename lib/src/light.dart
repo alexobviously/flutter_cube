@@ -21,7 +21,7 @@ class Light {
     this.specular.setFrom(c * specular);
   }
 
-  Color shading(Vector3 viewPosition, Vector3 fragmentPosition, Vector3 normal, Material material) {
+  Color shading(Vector3 viewPosition, Vector3 fragmentPosition, Vector3 normal, Material material, [Color baseColor]) {
     final Vector3 ambient = material.ambient.clone()..multiply(this.ambient);
     final Vector3 lightDir = (position - fragmentPosition)..normalize();
     final double diff = math.max(normal.dot(lightDir), 0);
@@ -34,6 +34,6 @@ class Light {
       ..add(diffuse)
       ..add(specular)
       ..clampScalar(0.0, 1.0);
-    return toColor(ambient, material.opacity);
+    return toColor(ambient, opacity: material.opacity, baseColor: baseColor);
   }
 }

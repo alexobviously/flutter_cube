@@ -92,6 +92,7 @@ class Scene {
   }
 
   void _renderObject(RenderMesh renderMesh, Object o, Matrix4 model, Matrix4 view, Matrix4 projection) {
+    print("_renderObject ${o.name}");
     if (!o.visiable) return;
     model *= o.transform;
     final Matrix4 transform = projection * view * model;
@@ -160,8 +161,10 @@ class Scene {
       final Vector3 a = Vector3.zero();
       final Vector3 b = Vector3.zero();
       final Vector3 c = Vector3.zero();
+      final int vertexCount = o.mesh.vertices.length;
+      final bool hasVertexColors = (vertexCount == o.mesh.colors.length);
 
-      for (int i = 0; i < indexCount; i++) {
+      for (int i = 0; i < indexCount - 1; i++) {
         // check if the face is clipped
         if (renderIndices[indexOffset + i] != null) {
           final Polygon p = indices[i];
@@ -175,9 +178,12 @@ class Scene {
           b.applyMatrix4(vertexTransform);
           c.applyMatrix4(vertexTransform);
 
-          renderColors[vertexOffset + p.vertex0] = light.shading(viewPosition, a, normal, material).value;
-          renderColors[vertexOffset + p.vertex1] = light.shading(viewPosition, b, normal, material).value;
-          renderColors[vertexOffset + p.vertex2] = light.shading(viewPosition, c, normal, material).value;
+          Color baseColor;
+          if(hasVertexColors && i < vertexCount) baseColor = o.mesh.colors[i];
+
+          renderColors[vertexOffset + p.vertex0] = light.shading(viewPosition, a, normal, material, baseColor).value;
+          renderColors[vertexOffset + p.vertex1] = light.shading(viewPosition, b, normal, material, baseColor).value;
+          renderColors[vertexOffset + p.vertex2] = light.shading(viewPosition, c, normal, material, baseColor).value;
         }
       }
     } else {
@@ -186,7 +192,7 @@ class Scene {
       final List<Color> colors = o.mesh.colors;
       final int colorCount = o.mesh.vertices.length;
       if (colorCount != o.mesh.colors.length) {
-        final int colorValue = (o.mesh.texture != null) ? Color.fromARGB(0, 0, 0, 0).value : toColor(o.mesh.material.diffuse, o.mesh.material.opacity).value;
+        final int colorValue = (o.mesh.texture != null) ? Color.fromARGB(0, 0, 0, 0).value : toColor(o.mesh.material.diffuse, opacity: o.mesh.material.opacity).value;
         for (int i = 0; i < colorCount; i++) {
           renderColors[vertexOffset + i] = colorValue;
         }

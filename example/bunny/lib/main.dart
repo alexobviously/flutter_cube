@@ -37,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     scene.camera.position.z = 10;
     scene.light.position.setFrom(Vector3(0, 10, 10));
     scene.light.setColor(Colors.white, _ambient, _diffuse, _specular);
-    _bunny = Object(position: Vector3(0, -1.0, 0), scale: Vector3(10.0, 10.0, 10.0), lighting: true, fileName: 'assets/bunny/bunny.obj');
+    _bunny = Object(name: 'test_object', position: Vector3(0, -1.0, 0), scale: Vector3(10.0, 10.0, 10.0), lighting: false, adaptiveBrightness: 70, fileName: 'assets/bunny/test.obj');
     scene.world.add(_bunny);
   }
 
@@ -46,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     super.initState();
     _controller = AnimationController(duration: Duration(milliseconds: 30000), vsync: this)
       ..addListener(() {
-        if (_bunny != null) {
+        if (_bunny != null && false) {
           _bunny.rotation.y = _controller.value * 360;
           _bunny.updateTransform();
           _scene.update();

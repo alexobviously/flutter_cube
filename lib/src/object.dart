@@ -19,6 +19,7 @@ class Object {
     bool normalized = true,
     String fileName,
     bool isAsset = true,
+    this.adaptiveBrightness = -1,
   }) {
     if (position != null) position.copyInto(this.position);
     if (rotation != null) rotation.copyInto(this.rotation);
@@ -33,7 +34,7 @@ class Object {
 
     // load mesh from obj file
     if (fileName != null) {
-      loadObj(fileName, normalized, isAsset: isAsset).then((List<Mesh> meshes) {
+      loadObj(fileName, normalized, isAsset: isAsset, adaptiveBrightness: adaptiveBrightness).then((List<Mesh> meshes) {
         if (meshes.length == 1) {
           mesh = meshes[0];
         } else if (meshes.length > 1) {
@@ -91,6 +92,8 @@ class Object {
 
   /// The transformation of the object in the scene, including position, rotation, and scaling.
   final Matrix4 transform = Matrix4.identity();
+
+  final int adaptiveBrightness;
 
   void updateTransform() {
     final Matrix4 m = Matrix4.compose(position, Quaternion.euler(radians(rotation.y), radians(rotation.x), radians(rotation.z)), scale);

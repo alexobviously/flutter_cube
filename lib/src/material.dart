@@ -180,8 +180,11 @@ Future<Uint32List> getImagePixels(Image image) async {
 }
 
 /// Convert Vector3 to Color
-Color toColor(Vector3 v, [double opacity = 1.0]) {
-  return Color.fromRGBO((v.r * 255).toInt(), (v.g * 255).toInt(), (v.b * 255).toInt(), opacity);
+Color toColor(Vector3 v, {double opacity = 1.0, Color baseColor}) {
+  if(baseColor == null)
+    return Color.fromRGBO((v.r * 255).toInt(), (v.g * 255).toInt(), (v.b * 255).toInt(), opacity);
+  else
+    return Color.fromRGBO((v.r * baseColor.red).toInt(), (v.g * baseColor.green).toInt(), (v.b * baseColor.blue).toInt(), opacity);
 }
 
 /// Convert Color to Vector3

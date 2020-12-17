@@ -55,7 +55,7 @@ class Mesh {
 /// Loading mesh from Wavefront's object file (.obj).
 /// Reference：http://paulbourke.net/dataformats/obj/
 ///
-Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = true}) async {
+Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = true, int adaptiveBrightness = -1}) async {
   Map<String, Material> materials;
   List<Vector3> vertices = List<Vector3>();
   List<Offset> texcoords = List<Offset>();
@@ -64,10 +64,16 @@ Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = tru
   List<String> elementNames = List<String>();
   List<String> elementMaterials = List<String>();
   List<int> elementOffsets = List<int>();
+  List<Color> colors = List<Color>();
   String materialName = '';
   String objectlName = '';
   String groupName = '';
   String basePath = path.dirname(fileName);
+
+  int i = 0;
+  int adaptiveBrightnessCount = 0;
+  int adaptiveBrightnessTotal = 0;
+  double adaptiveBrightnessCoefficient;
 
   var data;
   if (isAsset) {
@@ -83,36 +89,53 @@ Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = tru
 
     switch (parts[0]) {
       case 'mtllib':
-        // load material library file. eg: mtllib master.mtl
+      // load material library file. eg: mtllib master.mtl
         final mtlFileName = path.join(basePath, parts[1]);
         materials = await loadMtl(mtlFileName, isAsset: isAsset);
         break;
       case 'usemtl':
-        // material name from material library. eg: usemtl red
+      // material name from material library. eg: usemtl red
         if (parts.length >= 2) materialName = parts[1];
         // create a new mesh element
-        final String elementName = objectlName ?? groupName ?? materialName ?? '';
+        final String elementName = objectlName ?? groupName ?? materialName ??
+            '';
         elementNames.add(elementName);
         elementMaterials.add(materialName);
         elementOffsets.add(vertexIndices.length);
         break;
       case 'g':
-        // the name for the group. eg: g front cube
+      // the name for the group. eg: g front cube
         if (parts.length >= 2) groupName = parts[1];
         break;
       case 'o':
-        // the user-defined object name. eg: o cube
+      // the user-defined object name. eg: o cube
         if (parts.length >= 2) objectlName = parts[1];
         break;
       case 'v':
-        // a geometric vertex and its x y z coordinates. eg: v 0.000000 2.000000 0.000000
+      // a geometric vertex and its x y z coordinates. eg: v 0.000000 2.000000 0.000000
         if (parts.length >= 4) {
-          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]), double.parse(parts[3]));
+          final v = Vector3(double.parse(parts[1]), double.parse(parts[2]),
+              double.parse(parts[3]));
           vertices.add(v);
+        }
+        // support for the meshlab obj format with the encoding 'v x y z r g b', where rgb (0-1) give us a vertex colour
+        if (parts.length >= 7) {
+          int r = (double.parse(parts[4]) * 255).round();
+          int g = (double.parse(parts[5]) * 255).round();
+          int b = (double.parse(parts[6]) * 255).round();
+          Color c = Color.fromARGB(255, r, g, b);
+          colors.add(c);
+          if (adaptiveBrightness >= 0) {
+            if (i % 100 == 0) {
+              adaptiveBrightnessTotal += math.max(math.max(r, g), b);
+              adaptiveBrightnessCount++;
+            }
+            i++;
+          }
         }
         break;
       case 'vt':
-        // eg: vt 0.000000 0.000000
+      // eg: vt 0.000000 0.000000
         if (parts.length >= 3) {
           double x = double.parse(parts[1]);
           double y = double.parse(parts[2]);
@@ -128,11 +151,15 @@ Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = tru
           final List<String> p1 = parts[1].split('/');
           final List<String> p2 = parts[2].split('/');
           final List<String> p3 = parts[3].split('/');
-          Polygon vi = Polygon(_getVertexIndex(p1[0]), _getVertexIndex(p2[0]), _getVertexIndex(p3[0]));
+          Polygon vi = Polygon(_getVertexIndex(p1[0]), _getVertexIndex(p2[0]),
+              _getVertexIndex(p3[0]));
           vertexIndices.add(vi);
           Polygon ti;
-          if ((p1.length >= 2 && p1[1] != '') && (p2.length >= 2 && p2[1] != '') && (p3.length >= 2 && p3[1] != '')) {
-            ti = Polygon(_getVertexIndex(p1[1]), _getVertexIndex(p2[1]), _getVertexIndex(p3[1]));
+          if ((p1.length >= 2 && p1[1] != '') &&
+              (p2.length >= 2 && p2[1] != '') &&
+              (p3.length >= 2 && p3[1] != '')) {
+            ti = Polygon(_getVertexIndex(p1[1]), _getVertexIndex(p2[1]),
+                _getVertexIndex(p3[1]));
             textureIndices.add(ti);
           }
           // polygon to triangle. eg: f 1/1 2/2 3/3 4/4 ==> f 1/1 2/2 3/3 + f 1/1 3/3 4/4
@@ -150,6 +177,25 @@ Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = tru
       default:
     }
   }
+  if(adaptiveBrightness >= 0){
+    print("adaptiveBrightnessTotal: $adaptiveBrightnessTotal, adaptiveBrightnessCount: $adaptiveBrightnessCount");
+    print("average brightness of model: ${(adaptiveBrightnessTotal / adaptiveBrightnessCount)}");
+    adaptiveBrightnessCoefficient = adaptiveBrightness / (adaptiveBrightnessTotal / adaptiveBrightnessCount);
+    print("adaptive brightness coefficient: $adaptiveBrightnessCoefficient");
+    List<Color> newColors = [];
+    print(colors[0].red);
+    for(Color c in colors){
+      Color d = Color.fromARGB(
+        255,
+        math.min((c.red * adaptiveBrightnessCoefficient).round(), 255),
+        math.min((c.green * adaptiveBrightnessCoefficient).round(), 255),
+        math.min((c.blue * adaptiveBrightnessCoefficient).round(), 255),
+      );
+      newColors.add(d);
+    }
+    colors = newColors;
+    print(colors[0].red);
+  }
   final meshes = await _buildMesh(
     vertices,
     texcoords,
@@ -161,12 +207,14 @@ Future<List<Mesh>> loadObj(String fileName, bool normalized, {bool isAsset = tru
     elementOffsets,
     basePath,
     isAsset,
+    colors,
   );
+  print('Loaded obj with ${vertices.length} vertices and ${colors.length} colors');
   return normalized ? normalizeMesh(meshes) : meshes;
 }
 
 /// Load the texture image file and rebuild vertices and texcoords to keep the same length.
-Future<List<Mesh>> _buildMesh(List<Vector3> vertices, List<Offset> texcoords, List<Polygon> vertexIndices, List<Polygon> textureIndices, Map<String, Material> materials, List<String> elementNames, List<String> elementMaterials, List<int> elementOffsets, String basePath, bool isAsset,) async {
+Future<List<Mesh>> _buildMesh(List<Vector3> vertices, List<Offset> texcoords, List<Polygon> vertexIndices, List<Polygon> textureIndices, Map<String, Material> materials, List<String> elementNames, List<String> elementMaterials, List<int> elementOffsets, String basePath, bool isAsset, List<Color> colors) async {
   if (elementOffsets.length == 0) {
     elementNames.add('');
     elementMaterials.add('');
@@ -214,6 +262,7 @@ Future<List<Mesh>> _buildMesh(List<Vector3> vertices, List<Offset> texcoords, Li
       texturePath: imageEntry?.key,
       material: material,
       name: elementNames[index],
+      colors: colors,
     );
     meshes.add(mesh);
   }
