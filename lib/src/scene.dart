@@ -179,7 +179,7 @@ class Scene {
           c.applyMatrix4(vertexTransform);
 
           Color baseColor;
-          if(hasVertexColors && i < vertexCount) baseColor = o.mesh.colors[i];
+          if(hasVertexColors && vertexOffset + p.vertex0 < vertexCount) baseColor = o.mesh.colors[vertexOffset + p.vertex0];
 
           renderColors[vertexOffset + p.vertex0] = light.shading(viewPosition, a, normal, material, baseColor).value;
           renderColors[vertexOffset + p.vertex1] = light.shading(viewPosition, b, normal, material, baseColor).value;

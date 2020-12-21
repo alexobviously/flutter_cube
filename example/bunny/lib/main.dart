@@ -8,7 +8,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Cube',
-      theme: ThemeData.dark(),
+      theme: ThemeData.light(),
       home: MyHomePage(title: 'Flutter Cube Home Page'),
     );
   }
@@ -35,9 +35,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   void _onSceneCreated(Scene scene) {
     _scene = scene;
     scene.camera.position.z = 10;
-    scene.light.position.setFrom(Vector3(0, 10, 10));
+    scene.light.position.setFrom(Vector3(0, 5, 5));
     scene.light.setColor(Colors.white, _ambient, _diffuse, _specular);
-    _bunny = Object(name: 'test_object', position: Vector3(0, -1.0, 0), scale: Vector3(10.0, 10.0, 10.0), lighting: false, adaptiveBrightness: 70, fileName: 'assets/bunny/test.obj');
+    _bunny = Object(name: 'test_object', position: Vector3(0, -1.0, 0), scale: Vector3(10.0, 10.0, 10.0), lighting: true, adaptiveBrightness: 150, fileName: 'assets/bunny/test.obj');
     scene.world.add(_bunny);
   }
 
